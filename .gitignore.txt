@@ -1,0 +1,6 @@
+node_modules
+.env
+clientnode_modules
+backendnode_modules
+build
+dist
