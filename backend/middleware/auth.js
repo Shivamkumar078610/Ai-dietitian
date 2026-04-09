@@ -1,15 +1,19 @@
 import jwt from "jsonwebtoken";
 
-export default function (req, res, next) {
-  const token = req.headers.authorization;
+export default function authMiddleware(req, res, next) {
+  // Bearer token expected: "Bearer <token>"
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(" ")[1];
 
-  if (!token) return res.status(401).json({ error: "No token" });
+  if (!token) {
+    return res.status(401).json({ error: "Access denied. No token provided." });
+  }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fitbite_secret_2024");
     req.user = decoded;
     next();
-  } catch {
-    res.status(401).json({ error: "Invalid token" });
+  } catch (err) {
+    res.status(401).json({ error: "Invalid token. Please login again." });
   }
 }
