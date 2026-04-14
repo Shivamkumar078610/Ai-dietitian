@@ -1,47 +1,61 @@
 import express from "express";
 import axios from "axios";
 import authMiddleware from "../middleware/auth.js";
+import Profile from "../models/Profile.js";
 
 const router = express.Router();
 
+
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { message } = req.body;
+    const { messages } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ error: "Message required" });
+    if (!messages || !messages.length) {
+      return res.status(400).json({ error: "Messages required" });
+    }
+
+    const profile = await Profile.findOne({ userId: req.user.id });
+    if (!profile) {
+      return res.status(400).json({ error: "Complete your profile first" });
     }
 
     if (!process.env.OPENROUTER_API_KEY) {
       return res.status(500).json({ error: "AI service unavailable" });
     }
 
-    const prompt = `
-You are FitBite AI, a friendly Indian dietitian assistant. 
+    const systemContent = `
+You are a professional AI Dietitian and Nutritionist.
+You behave like ChatGPT.
+You give:
+- Personalized advice
+- Friendly human-like responses
+- Clear explanations
+- Indian food knowledge
 
-User asked: "${message}"
+STRICT RULES:
+- Respect dietPreference (${profile.dietPreference}): veg = NO chicken/meat/fish, vegan = NO dairy/egg/animal products
+- Allergies: ${profile.allergies}
+- Budget: ₹${profile.budget}/week
+- Age: ${profile.age}, Gender: ${profile.gender}, Height: ${profile.height}cm, Weight: ${profile.weight}kg, Activity: ${profile.activityLevel}
 
-Keep responses:
-- Short & helpful (under 300 words)
-- Practical Indian food examples  
-- Motivational & encouraging
-- Use emojis sparingly
-- Reference Dashboard for plans/tracking
-
-Context: Indian user wanting personalized diet plans, calorie tracking, meal ideas.
-
-Respond conversationally but professionally.
+Indian realistic meals only. Conversational.
     `;
+
+
+    const aiMessages = [
+      { role: "system", content: systemContent },
+      ...messages.map((m) => ({
+        role: m.role.toLowerCase(),
+        content: m.content
+      })).slice(-20)
+    ];
 
     const aiRes = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
         model: "mistralai/mistral-7b-instruct:free",
-        messages: [
-          { role: "system", content: "You are FitBite AI Dietitian. Helpful, encouraging, Indian recipes." },
-          { role: "user", content: prompt }
-        ],
-        max_tokens: 400
+        messages: aiMessages,
+        max_tokens: 600
       },
       {
         headers: {
@@ -50,6 +64,7 @@ Respond conversationally but professionally.
         }
       }
     );
+
 
     const response = aiRes.data.choices[0].message.content.trim();
 

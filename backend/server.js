@@ -1,48 +1,48 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import axios from "axios";
+const prompt = `
+You are a professional Indian AI Dietitian.
 
-// Routes
-import authRoutes from "./routes/auth.js";
-import dietRoutes from "./routes/diet.js";
-import chatRoutes from "./routes/chat.js";
+Your job is to act like a real human nutritionist and create a STRICTLY personalized diet plan.
 
-dotenv.config();
+User Details:
+- Age: ${age}
+- Height: ${height} cm
+- Weight: ${weight} kg
+- Goal: ${goal}
+- Diet Preference: ${diet}
+- Allergies: ${req.body.allergies || "None"}
 
-const app = express();
+IMPORTANT RULES (FOLLOW STRICTLY):
 
-app.use(cors());
-app.use(express.json());
+1. If diet is "veg" → DO NOT include chicken, egg, fish, meat
+2. If diet is "vegan" → NO dairy (milk, paneer, butter, ghee)
+3. Respect allergies strictly
+4. Only include realistic Indian foods
+5. Match goal (fat loss = calorie deficit, muscle gain = surplus)
+6. Make it practical like a real dietitian (not robotic)
 
-// Health check
-app.get("/", (req, res) => {
-  res.json({ 
-    message: "FitBite AI Backend running ✅", 
-    endpoints: {
-      auth: "/api/auth/login, /api/auth/signup",
-      diet: "/api/diet/generate",
-      chat: "/api/chat"
-    }
-  });
-});
+TONE:
+- Talk like a real consultant (friendly, helpful)
+- Not robotic
+- Clear and structured
 
-// API Routes v1
-app.use("/api/auth", authRoutes);
-app.use("/api/diet", dietRoutes);
-app.use("/api/chat", chatRoutes);
+OUTPUT FORMAT (STRICT JSON ONLY):
 
-// 404 handler
-app.use("*", (req, res) => {
-  res.status(404).json({ error: "Route not found" });
-});
+{
+  "Monday": {
+    "breakfast": "",
+    "lunch": "",
+    "dinner": "",
+    "snacks": ""
+  },
+  "Tuesday": {},
+  "Wednesday": {},
+  "Thursday": {},
+  "Friday": {},
+  "Saturday": {},
+  "Sunday": {}
+}
 
-// Start server
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 FitBite Backend running on http://localhost:${PORT}`);
-  console.log(`📋 Endpoints: /api/auth/*, /api/diet/generate, /api/chat`);
-});
-
-
+DO NOT include any explanation.
+DO NOT include non-veg items if veg is selected.
+ONLY return JSON.
+`;

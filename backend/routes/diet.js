@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post("/generate", authMiddleware, async (req, res) => {
   try {
-    const { age, height, weight, goal, diet } = req.body;
+    const { age, height, weight, goal, diet, allergies, budget, targetWeight } = req.body;
 
     if (!age || !height || !weight || !goal) {
       return res.status(400).json({ error: "Missing required fields" });

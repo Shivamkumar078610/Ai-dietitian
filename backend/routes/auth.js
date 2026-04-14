@@ -4,18 +4,34 @@ import authMiddleware from "../middleware/auth.js";
 
 const router = express.Router();
 
+import User from '../models/User.js';
+
+
 // Signup
+import bcrypt from "bcryptjs";
+
 router.post("/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // TODO: Real DB save user
-    const user = { id: Date.now(), name, email };
-    const token = jwt.sign(user, process.env.JWT_SECRET || "fitbite_secret_2024", { expiresIn: "7d" });
+    // Check if user exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "User already exists" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const user = new User({ name, email, password: hashedPassword });
+    await user.save();
+
+    const token = jwt.sign({ id: user._id, name, email }, process.env.JWT_SECRET || "fitbite_secret_2024", { expiresIn: "7d" });
 
     res.json({ 
       message: "Signup successful ✅", 
-      user, 
+      user: { id: user._id, name, email }, 
       token 
     });
   } catch (err) {
@@ -23,35 +39,38 @@ router.post("/signup", async (req, res) => {
   }
 });
 
+
 // Login
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // TODO: Real DB verify user/password
-    if (email && password) {
-      const user = { id: 1, name: email.split("@")[0], email };
-      const token = jwt.sign(user, process.env.JWT_SECRET || "fitbite_secret_2024", { expiresIn: "7d" });
-
-      res.json({ 
-        message: "Login successful ✅", 
-        user, 
-        token 
-      });
-    } else {
-      res.status(400).json({ error: "Invalid credentials" });
+    const user = await User.findOne({ email });
+    if (!user || !await bcrypt.compare(password, user.password)) {
+      return res.status(400).json({ error: "Invalid credentials" });
     }
+
+    const token = jwt.sign({ id: user._id, name: user.name, email: user.email }, process.env.JWT_SECRET || "fitbite_secret_2024", { expiresIn: "7d" });
+
+    res.json({ 
+      message: "Login successful ✅", 
+      user: { id: user._id, name: user.name, email: user.email }, 
+      token 
+    });
   } catch (err) {
     res.status(500).json({ error: "Server error during login" });
   }
 });
 
-// Protected profile
+
+// Protected user basic profile
 router.get("/profile", authMiddleware, (req, res) => {
   res.json({ 
-    message: "Profile fetched", 
+    message: "Basic profile fetched", 
     user: req.user 
   });
 });
+
+
 
 export default router;
